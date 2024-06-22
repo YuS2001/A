@@ -1,38 +1,90 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './Header';
 import ActivityFeed from './ActivityFeed';
 import ArchivedCalls from './ArchivedCalls';
+import './app.css';
+
+const BASE_URL = 'https://charming-bat-singlet.cyclic.app/https://cerulean-marlin-wig.cyclic.app';
 
 const App = () => {
-  const [calls, setCalls] = useState([
-    // Example calls data structure
-    { id: 1, detail: 'Call 1', isArchived: false },
-    { id: 2, detail: 'Call 2', isArchived: false },
-  ]);
+  const [calls, setCalls] = useState([]);
+
+  useEffect(() => {
+    fetch(`${BASE_URL}/activities`)
+      .then(response => response.json())
+      .then(data => setCalls(data))
+      .catch(error => console.error('Error fetching data:', error));
+  }, []);
 
   const archiveCall = (id) => {
-    setCalls(calls.map(call => call.id === id ? { ...call, isArchived: true } : call));
+    fetch(`${BASE_URL}/activities/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ is_archived: true })
+    })
+    .then(response => response.json())
+    .then(updatedCall => {
+      setCalls(calls.map(call => call.id === updatedCall.id ? updatedCall : call));
+    })
+    .catch(error => console.error('Error archiving call:', error));
   };
 
   const unarchiveCall = (id) => {
-    setCalls(calls.map(call => call.id === id ? { ...call, isArchived: false } : call));
+    fetch(`${BASE_URL}/activities/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ is_archived: false })
+    })
+    .then(response => response.json())
+    .then(updatedCall => {
+      setCalls(calls.map(call => call.id === updatedCall.id ? updatedCall : call));
+    })
+    .catch(error => console.error('Error unarchiving call:', error));
   };
 
   const archiveAll = () => {
-    setCalls(calls.map(call => ({ ...call, isArchived: true })));
+    const updatedCalls = calls.map(call => ({ ...call, is_archived: true }));
+    setCalls(updatedCalls);
+    updatedCalls.forEach(call => {
+      fetch(`${BASE_URL}/activities/${call.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ is_archived: true })
+      }).catch(error => console.error('Error archiving all calls:', error));
+    });
   };
 
   const unarchiveAll = () => {
-    setCalls(calls.map(call => ({ ...call, isArchived: false })));
+    const updatedCalls = calls.map(call => ({ ...call, is_archived: false }));
+    setCalls(updatedCalls);
+    updatedCalls.forEach(call => {
+      fetch(`${BASE_URL}/activities/${call.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ is_archived: false })
+      }).catch(error => console.error('Error unarchiving all calls:', error));
+    });
   };
 
   return (
-    <div>
-      <Header />
-      <ActivityFeed calls={calls} onArchive={archiveCall} />
-      <ArchivedCalls calls={calls} onUnarchive={unarchiveCall} />
-      <button onClick={archiveAll}>Archive All</button>
-      <button onClick={unarchiveAll}>Unarchive All</button>
+    <div id="app">
+      <div className="container">
+        <Header />
+        <div className="container-view">
+          <button onClick={archiveAll}>Archive All Calls</button>
+          <ActivityFeed calls={calls} onArchive={archiveCall} />
+          <button onClick={unarchiveAll}>Unarchive All Calls</button>
+          <ArchivedCalls calls={calls} onUnarchive={unarchiveCall} />
+        </div>
+      </div>
     </div>
   );
 };
